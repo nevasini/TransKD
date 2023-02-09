@@ -118,7 +118,7 @@ class iiscmed(Dataset):
 
         self.filenames = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.images_root)) for f in fn if is_image(f)]
         self.filenames.sort()
-
+        
         #[os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(".")) for f in fn]
         #self.filenamesGt = [image_basename(f) for f in os.listdir(self.labels_root) if is_image(f)]
         self.filenamesGt = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.labels_root)) for f in fn if is_label(f)]
