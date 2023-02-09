@@ -25,7 +25,7 @@ from utils import netParams
 from models.Segformer import mit_b0,mit_b1,mit_b2#,mit_b3,mit_b4,mit_b5
 from TransKD import build_kd_trans, hcl
 
-from dataset import VOC12,cityscapes, ACDC
+from dataset import VOC12,cityscapes, ACDC, iiscmed
 from transform import Relabel, ToLabel, Colorize
 import importlib
 from iouEval import iouEval, getColorEntry
@@ -91,8 +91,6 @@ class CrossEntropyLoss2d(torch.nn.Module):
     def forward(self, outputs, targets):
         return self.loss(torch.nn.functional.log_softmax(outputs, dim=1), targets)
 
-
-
 def train(args, model, teacher):
     best_acc = 0
 
@@ -132,6 +130,9 @@ def train(args, model, teacher):
     elif args.dataset == 'ACDC':
         dataset_train = ACDC(args.datadir, co_transform, 'train')
         dataset_val = ACDC(args.datadir, co_transform_val, 'val')
+    elif args.dataset == 'iiscmed':
+        dataset_train = iiscmed(args.datadir, co_transform, 'train')
+        dataset_val = iiscmed(args.datadir, co_transform_val, 'val')
     else:
         assert 'Dataset does not exist'
 
@@ -147,6 +148,8 @@ def train(args, model, teacher):
         savedir = f'../save/Testbatch{args.batch_size}/{args.kdtype}'
     elif args.dataset == 'ACDC':
         savedir = f'../save/Testbatch{args.batch_size}-ACDC/{args.kdtype}'
+    elif args.dataset == 'iiscmed':
+        savedir = f'../save/Testbatch{args.batch_size}/{args.kdtype}'
     else:
         assert 'Dataset does not exist'
 
@@ -159,6 +162,10 @@ def train(args, model, teacher):
         savefile = f'{args.model}-{args.kdtype}-{pretrained}-{TODAY}'
     else:    
         savefile = f'{args.model}-{args.kdtype}-{pretrained}'
+    
+    if not os.path.isdir(savedir):
+        os.makedirs(savedir)
+
     automated_log_path = savedir + f"/automated_log_{savefile}.txt"
     modeltxtpath = savedir + f"/model_{savefile}.txt"   
     if (not os.path.exists(automated_log_path)):    #dont add first line if it exists 
@@ -414,10 +421,16 @@ def save_checkpoint(state, is_best, filenameCheckpoint, filenameBest):
 
 def load_my_state_dict(model, state_dict):  #custom function to load model when not all dict elements
     own_state = model.state_dict()
+    # print(f"own_state.keys() = {own_state.keys()}")
     for name, param in state_dict.items():
+        # print(f"name = {name}")
         if name not in own_state:
             if name.startswith("module."):
-                own_state[name.split("module.")[-1]].copy_(param)
+                try:
+                    own_state[name.split("module.")[-1]].copy_(param)
+                except:
+                    print(name, " not loaded")
+                    continue
             else:
                 print(name, " not loaded")
                 continue
@@ -430,6 +443,8 @@ def main(args):
     if args.dataset == 'cityscapes':
         savedir = f'../save/Testbatch{args.batch_size}/{args.kdtype}'
     elif args.dataset == 'ACDC':
+        savedir = f'../save/Testbatch{args.batch_size}-ACDC/{args.kdtype}'
+    elif args.dataset == 'iiscmed':
         savedir = f'../save/Testbatch{args.batch_size}-ACDC/{args.kdtype}'
     else:
         assert 'Dataset does not exist'
@@ -444,7 +459,9 @@ def main(args):
     if args.dataset == 'cityscapes':
         teacher_path = '../checkpoints/model_SegformerB2_best.pth'
     elif args.dataset == 'ACDC':
-        teacher_path = '../checkpoints/model_SegformerB2-ACDC_best.pth'
+        teacher_path =r'C:\Users\HP\Downloads\kvasir-seg\model_SegformerB2-ACDC_best.pth'
+    elif args.dataset == 'iiscmed':
+        teacher_path = r'C:\Users\HP\Downloads\kvasir-seg\model_SegformerB2-ACDC_best.pth'
     else:
         assert 'dataset not supported'
 
@@ -457,7 +474,7 @@ def main(args):
             path = '../ckpt_pretrained/mit_b1.pth'  
         if args.student_pretrained: 
             print('load weights from pretrained ckpt ...')               
-            save_model = torch.load(path)
+            save_model = torch.load(path, map_location=torch.device('cpu'))
             model_dict =  model.state_dict()
             state_dict = {k:v for k,v in save_model.items() if k in model_dict.keys()}
             model_dict.update(state_dict)
@@ -474,14 +491,14 @@ def main(args):
     if args.cuda:
         if torch.cuda.device_count() > 1:
             print("torch.cuda.device_count()=", torch.cuda.device_count())
-            teacher = load_my_state_dict(teacher,torch.load(teacher_path))#True
+            teacher = load_my_state_dict(teacher,torch.load(teacher_path, map_location=torch.device('cpu')))#True
             model=model.to(args.device)
             teacher = teacher.to(args.device)
             model = nn.DataParallel(model)  # multi-card data parallel
             teacher = nn.DataParallel(teacher)
         else:
             print("single GPU for training")
-            teacher = load_my_state_dict(teacher,torch.load(teacher_path))
+            teacher = load_my_state_dict(teacher,torch.load(teacher_path, map_location=torch.device('cpu')))
             model = model.to(args.device) # 1-card data parallel
             teacher = teacher.to(args.device)
     """
@@ -523,8 +540,8 @@ if __name__ == '__main__':
     parser.add_argument('--kdtype',default='TransKD-Base', choices=['TransKD-EA','TransKD-GL','TransKD-Base'])
 
     parser.add_argument('--port', type=int, default=8097)
-    parser.add_argument('--dataset',default="cityscapes", choices=['ACDC','cityscapes'])
-    parser.add_argument('--datadir', default="/path/to/data")
+    parser.add_argument('--dataset',default="iiscmed", choices=['ACDC','cityscapes', 'iiscmed'])
+    parser.add_argument('--datadir', default=r"C:\Users\HP\Downloads\kvasir-seg\processed")
     parser.add_argument('--height', type=int, default=512)
     parser.add_argument('--num-epochs', type=int, default=1000)
     parser.add_argument('--num-workers', type=int, default=4)
@@ -537,7 +554,7 @@ if __name__ == '__main__':
     parser.add_argument('--visualize_outimages', action='store_true',default=False)
     parser.add_argument('--iouTrain', action='store_true', default=False) #recommended: False (takes more time to train otherwise)
     parser.add_argument('--iouVal', action='store_true', default=True)  
-    parser.add_argument("--device", default='cuda', help="Device on which the network will be trained. Default: cuda")
+    parser.add_argument("--device", default='cpu', help="Device on which the network will be trained. Default: cuda")
     parser.add_argument('--student-pretrained',default= False)
     parser.add_argument('--review-kd-loss-weight', type=float, default=1.0,
                     help='feature konwledge distillation loss weight')

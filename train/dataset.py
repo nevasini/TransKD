@@ -56,8 +56,92 @@ class VOC12(Dataset):
     def __len__(self):
         return len(self.filenames)
 
+# class SemanticSegmentationDataset(Dataset):
+#     """Image (semantic) segmentation dataset."""
+
+#     def __init__(self, root_dir, feature_extractor, train=True):
+#         """
+#         Args:
+#             root_dir (string): Root directory of the dataset containing the images + annotations.
+#             feature_extractor (SegFormerFeatureExtractor): feature extractor to prepare images + segmentation maps.
+#             train (bool): Whether to load "training" or "validation" images + annotations.
+#         """
+#         self.root_dir = root_dir
+#         self.feature_extractor = feature_extractor
+#         self.train = train
+
+#         self.img_dir = os.path.join(self.root_dir, "images")
+#         self.ann_dir = os.path.join(self.root_dir, "masks")
+
+#         # read images
+#         image_file_names = []
+#         for root, dirs, files in os.walk(self.img_dir):
+#             image_file_names.extend(files)
+#         self.images = sorted(image_file_names)
+#         print(len(self.images))
+
+#         # read annotations
+#         annotation_file_names = []
+#         for root, dirs, files in os.walk(self.ann_dir):
+#             annotation_file_names.extend(files)
+#         self.annotations = sorted(annotation_file_names)
+#         print(len(self.annotations))
+
+#         assert len(self.images) == len(
+#             self.annotations), "There must be as many images as there are segmentation maps"
+
+#     def __len__(self):
+#         return len(self.images)
+
+#     def __getitem__(self, idx):
+
+#         image = Image.open(os.path.join(self.img_dir, self.images[idx]))
+#         segmentation_map = Image.open(os.path.join(
+#             self.ann_dir, self.annotations[idx])).convert('L')
+
+#         # randomly crop + pad both image and segmentation map to same size
+#         encoded_inputs = self.feature_extractor(
+#             image, segmentation_map, return_tensors="pt")
+
+#         for k, v in encoded_inputs.items():
+#             encoded_inputs[k].squeeze_()  # remove batch dimension
+
+#         return encoded_inputs
 
 
+class iiscmed(Dataset):
+
+    def __init__(self,root, co_transform, subset='train'):
+        
+        self.images_root = os.path.join(root, f'{subset}/images')
+        self.labels_root = os.path.join(root, f'{subset}/masks')
+
+        self.filenames = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.images_root)) for f in fn if is_image(f)]
+        self.filenames.sort()
+
+        #[os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(".")) for f in fn]
+        #self.filenamesGt = [image_basename(f) for f in os.listdir(self.labels_root) if is_image(f)]
+        self.filenamesGt = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.labels_root)) for f in fn if is_label(f)]
+        self.filenamesGt.sort()
+
+        self.co_transform = co_transform # ADDED THIS
+
+    def __getitem__(self, index):
+        filename = self.filenames[index]
+        filenameGt = self.filenamesGt[index]
+
+        with open(image_path(self.images_root, filename, '.jpg'), 'rb') as f:
+            image = load_image(f).convert('RGB')
+        with open(image_path(self.labels_root, filenameGt, '.jpg'), 'rb') as f:
+            label = load_image(f).convert('P')
+
+        if self.co_transform is not None:
+            image, label = self.co_transform(image, label)
+
+        return image, label
+
+    def __len__(self):
+        return len(self.filenames)
 
 class cityscapes(Dataset):
 
