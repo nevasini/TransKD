@@ -4,11 +4,13 @@ import os
 from PIL import Image
 
 from torch.utils.data import Dataset
+import os.path
 
 EXTENSIONS = ['.jpg', '.png']
 
 def load_image(file):
-    return Image.open(file)
+    return Image.open(file).resize((512,512),Image.LANCZOS)
+
 
 def is_image(filename):
     return any(filename.endswith(ext) for ext in EXTENSIONS)
@@ -121,8 +123,11 @@ class iiscmed(Dataset):
         
         #[os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(".")) for f in fn]
         #self.filenamesGt = [image_basename(f) for f in os.listdir(self.labels_root) if is_image(f)]
-        self.filenamesGt = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.labels_root)) for f in fn if is_label(f)]
+        self.filenamesGt = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.labels_root)) for f in fn if is_image(f)]
         self.filenamesGt.sort()
+
+        #print(len(self.filenames))
+        #print(len(self.filenamesGt))
 
         self.co_transform = co_transform # ADDED THIS
 
@@ -130,10 +135,10 @@ class iiscmed(Dataset):
         filename = self.filenames[index]
         filenameGt = self.filenamesGt[index]
 
-        with open(image_path(self.images_root, filename, '.jpg'), 'rb') as f:
+        with open(image_path(os.path.basename(self.images_root), filename, ""), 'rb') as f:
             image = load_image(f).convert('RGB')
-        with open(image_path(self.labels_root, filenameGt, '.jpg'), 'rb') as f:
-            label = load_image(f).convert('P')
+        with open(image_path(os.path.basename(self.labels_root), filenameGt, ""), 'rb') as f:
+            label = load_image(f).convert('L')
 
         if self.co_transform is not None:
             image, label = self.co_transform(image, label)

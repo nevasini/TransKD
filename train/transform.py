@@ -59,6 +59,16 @@ class Relabel:
         tensor[tensor == self.olabel] = self.nlabel
         return tensor
 
+class Relabeltry:
+
+    def __init__(self,nlabel):
+        self.nlabel=nlabel
+    
+    def __call__(self,tensor):
+        assert (isinstance(tensor, torch.LongTensor) or isinstance(tensor, torch.ByteTensor)) , 'tensor needs to be LongTensor'
+        tensor[tensor != 0] = self.nlabel
+        return tensor
+
 
 class ToLabel:
 

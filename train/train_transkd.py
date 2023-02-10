@@ -26,7 +26,7 @@ from models.Segformer import mit_b0,mit_b1,mit_b2#,mit_b3,mit_b4,mit_b5
 from TransKD import build_kd_trans, hcl
 
 from dataset import VOC12,cityscapes, ACDC, iiscmed
-from transform import Relabel, ToLabel, Colorize
+from transform import Relabel, ToLabel, Colorize, Relabeltry
 import importlib
 from iouEval import iouEval, getColorEntry
 
@@ -34,7 +34,7 @@ from shutil import copyfile
 # from torchvision.transforms.functional import InterpolationMode
 # from models.PVT import pvt_large
 NUM_CHANNELS = 3
-NUM_CLASSES = 20 #pascal=22, cityscapes=20
+NUM_CLASSES = 2 #pascal=22, cityscapes=20
 
 color_transform = Colorize(NUM_CLASSES)
 image_transform = ToPILImage()
@@ -75,7 +75,7 @@ class MyCoTransform(object):
 
         input = ToTensor()(input)
         target = ToLabel()(target)
-        target = Relabel(255, 19)(target)
+        target = Relabeltry(1)(target)
 
         return input, target
 
@@ -100,25 +100,25 @@ def train(args, model, teacher):
     weight = torch.ones(NUM_CLASSES)
     weight[0] = 2.5959737
     weight[1] = 6.741505
-    weight[2] = 3.5353868
-    weight[3] = 9.866315
-    weight[4] = 9.690922
-    weight[5] = 9.369371
-    weight[6] = 10.289124 
-    weight[7] = 9.953209
-    weight[8] = 4.3098087
-    weight[9] = 9.490392
-    weight[10] = 7.674411
-    weight[11] = 9.396925	
-    weight[12] = 10.347794 	
-    weight[13] = 6.3928986
-    weight[14] = 10.226673 	
-    weight[15] = 10.241072	
-    weight[16] = 10.28059
-    weight[17] = 10.396977
-    weight[18] = 10.05567	
+    #weight[2] = 3.5353868
+    #weight[3] = 9.866315
+    #weight[4] = 9.690922
+    #weight[5] = 9.369371
+    #weight[6] = 10.289124 
+    #weight[7] = 9.953209
+    #weight[8] = 4.3098087
+    #weight[9] = 9.490392
+    #weight[10] = 7.674411
+    #weight[11] = 9.396925	
+    #weight[12] = 10.347794 	
+    #weight[13] = 6.3928986
+    #weight[14] = 10.226673 	
+    #weight[15] = 10.241072	
+    #weight[16] = 10.28059
+    #weight[17] = 10.396977
+    #weight[18] = 10.05567	
 
-    weight[19] = 0
+    #weight[19] = 0
 
     assert os.path.exists(args.datadir), "Error: datadir (dataset directory) could not be loaded"
 
@@ -247,6 +247,10 @@ def train(args, model, teacher):
         model.train()
         teacher.eval()
         for step, (images, labels) in enumerate(loader):
+
+            print(images.shape)
+            print(labels.shape)
+
             start_time = time.time()
 
             inputs = Variable(images).to(args.device)
@@ -543,8 +547,8 @@ if __name__ == '__main__':
     parser.add_argument('--dataset',default="iiscmed", choices=['ACDC','cityscapes', 'iiscmed'])
     parser.add_argument('--datadir', default=r"C:\Users\HP\Downloads\kvasir-seg\processed")
     parser.add_argument('--height', type=int, default=512)
-    parser.add_argument('--num-epochs', type=int, default=1000)
-    parser.add_argument('--num-workers', type=int, default=4)
+    parser.add_argument('--num-epochs', type=int, default=2)
+    parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--batch-size', type=int, default=2)
     parser.add_argument('--steps-loss', type=int, default=50)
     parser.add_argument('--steps-plot', type=int, default=50)
