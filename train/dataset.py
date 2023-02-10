@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 EXTENSIONS = ['.jpg', '.png']
 
 def load_image(file):
-    return Image.open(file)
+    return Image.open(file).resize((512,512), Image.Resampling.LANCZOS)
 
 def is_image(filename):
     return any(filename.endswith(ext) for ext in EXTENSIONS)
@@ -121,18 +121,20 @@ class iiscmed(Dataset):
         
         #[os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(".")) for f in fn]
         #self.filenamesGt = [image_basename(f) for f in os.listdir(self.labels_root) if is_image(f)]
-        self.filenamesGt = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.labels_root)) for f in fn if is_label(f)]
+        self.filenamesGt = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(self.labels_root)) for f in fn if is_image(f)]
         self.filenamesGt.sort()
 
         self.co_transform = co_transform # ADDED THIS
+        print(f"len(self.filenames) = {len(self.filenames)}")
+        print(f"len(self.filenamesGt) = {len(self.filenamesGt)}")
 
     def __getitem__(self, index):
         filename = self.filenames[index]
         filenameGt = self.filenamesGt[index]
 
-        with open(image_path(self.images_root, filename, '.jpg'), 'rb') as f:
+        with open(image_path('', filename, ''), 'rb') as f:
             image = load_image(f).convert('RGB')
-        with open(image_path(self.labels_root, filenameGt, '.jpg'), 'rb') as f:
+        with open(image_path('', filenameGt, ''), 'rb') as f:
             label = load_image(f).convert('P')
 
         if self.co_transform is not None:
