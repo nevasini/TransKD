@@ -9,8 +9,12 @@ import os.path
 EXTENSIONS = ['.jpg', '.png']
 
 def load_image(file):
+<<<<<<< HEAD
     return Image.open(file).resize((512,512),Image.LANCZOS)
 
+=======
+    return Image.open(file).resize((512,512), Image.Resampling.LANCZOS)
+>>>>>>> 67f5a59b38d6e302077958ff9613f3e47e0a254b
 
 def is_image(filename):
     return any(filename.endswith(ext) for ext in EXTENSIONS)
@@ -130,15 +134,24 @@ class iiscmed(Dataset):
         #print(len(self.filenamesGt))
 
         self.co_transform = co_transform # ADDED THIS
+        print(f"len(self.filenames) = {len(self.filenames)}")
+        print(f"len(self.filenamesGt) = {len(self.filenamesGt)}")
 
     def __getitem__(self, index):
         filename = self.filenames[index]
         filenameGt = self.filenamesGt[index]
 
+<<<<<<< HEAD
         with open(image_path(os.path.basename(self.images_root), filename, ""), 'rb') as f:
             image = load_image(f).convert('RGB')
         with open(image_path(os.path.basename(self.labels_root), filenameGt, ""), 'rb') as f:
             label = load_image(f).convert('L')
+=======
+        with open(image_path('', filename, ''), 'rb') as f:
+            image = load_image(f).convert('RGB')
+        with open(image_path('', filenameGt, ''), 'rb') as f:
+            label = load_image(f).convert('P')
+>>>>>>> 67f5a59b38d6e302077958ff9613f3e47e0a254b
 
         if self.co_transform is not None:
             image, label = self.co_transform(image, label)
